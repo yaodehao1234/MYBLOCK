@@ -148,6 +148,7 @@ struct CubeFace{
         point_cube[3]=v3;
     }
 };
+
 int randmod(int mod){
     return ((rand()-1)%mod+1);
 }
@@ -357,6 +358,21 @@ public:
 
 struct qujian{
     double l,r;
+};
+
+class Sound{
+public:
+    string s;
+    Sound(string s=""):s(s){}
+    void Playing(){
+        mciSendStringA(s.c_str(), NULL, 0, NULL);
+        //PlaySound(s.c_str(), NULL, SND_FILENAME | SND_ASYNC );
+    }
+    void playSound(){
+        thread PS(Playing,*this);
+        PS.detach();
+        return;
+    }
 };
 
 point_3D operator+(const block&a,const vec&b){
@@ -1261,7 +1277,18 @@ void ShowCursor(bool visible) { //显示或隐藏光标
  //SetConsoleCursorInfo设定控制台窗口的光标大小和是否可见
 }
 int main(){
-    
+    SetConsoleOutputCP(CP_UTF8);
+    cout<<"重要必看：\n";
+    cout<<"主界面按数字进行选择，enter键回车确认\n";
+    cout<<"在游玩时按ESC退出程序\n";
+    cout<<"在主界面3.exit选项为退出程序\n";
+    cout<<"如果遇见BUG，请把它当成特性\n";
+    cout<<"如果对以上内容清晰，请输入OK后回车否则会退出程序\n";
+    cout<<"请输入：";
+    string OK;
+    cin>>OK;
+    if(OK!="OK"&&OK!="Ok"&&OK!="ok")return 0;
+    system("cls");
     fstream log("game.log",ios::out);
     cout<<" /$$      /$$                                             /$$       /$$"<<endl;
     cout<<"| $$$    /$$$                                            | $$      | $$"<<endl;
@@ -1292,6 +1319,10 @@ int main(){
     cout<<"\n1.Create a map\n";
     cout<<"2.Select a map\n";
     cout<<"3.exit        \n";
+    
+    Sound BackGround("play ./Sound/BackGround.wav");
+    BackGround.playSound();
+
     while(true){
         gotoxy(0,20);
         if(select[1]){
@@ -1342,6 +1373,7 @@ int main(){
         for(int j=0;j<10;++j)cout<<" ";
         cout<<endl;
     }
+    for(int i=0;i<10;++i)cout<<endl;
     string name;
     //cin>>M;
     log<<name<<endl;
@@ -1523,21 +1555,23 @@ int main(){
             if(!bclick){
                 bclick=true;
                 if(!click){//音效
-                    thread first(play);
-                    //system("C:\\Users\\yaodehao123\\Desktop\\Codes\\3D_test\\Usp.mp3");
-                    //system("start mp3tag /play ""C:\\Users\\yaodehao123\\Desktop\\Codes\\3D_test\\Usp.mp3""");
+                    string path="play  ./Sound/stone";
+                    path+=to_string(rand()%3+1);
+                    path+=".wav";
+                    Sound place_break(path);
+                    place_break.playSound();
+                    //thread first(play);
                     click=true;
                     click_all++;
                     //cout<<"OK";
-                    first.detach();
                 }
                 int count=Del();
                 //add_block(count);//这里以后区分动态block和静态block
                 click_valuble+=count;
-                if(count){
-                    thread first(play1);
-                    first.detach();
-                }
+                // if(count){
+                //     thread first(play1);
+                //     first.detach();
+                // }
                 flag=true;
             }
 
@@ -1552,8 +1586,11 @@ int main(){
             if(!rclick){
                 rclick=true;
                 place_block();
-                thread Place(play2);
-                Place.detach();
+                string path="play  ./Sound/stone";
+                path+=to_string(rand()%3+1);
+                path+=".wav";
+                Sound place_break(path);
+                place_break.playSound();
                 flag=true;
             }
         }
@@ -1639,8 +1676,8 @@ int main(){
         log<<"Saved map "<<name<<endl;
     }
     else {
-        write_map(names[M-2]);
-        log<<"Saved map "<<name[M-2]<<endl;
+        write_map(names[M-1]);
+        log<<"Saved map "<<name[M-1]<<endl;
     }
     //draw.~thread();
     ShowCursor(TRUE);
