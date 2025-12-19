@@ -24,7 +24,7 @@
 
 using namespace std;
 
-int click_all,click_valuble,fps_out;
+int click_all,click_valuble,fps_out;//一些全局变量，包括判断是否有更新变化等
 bool space=false;
 bool flag=false;
 bool DRAW=0;
@@ -34,7 +34,7 @@ bool bclick;
 bool rclick;
 bool wait_jump;
 bool shift;
-recursive_mutex cam_mtx;
+recursive_mutex cam_mtx;//递归互斥锁，防止
 double vy=0;
 const double G=0.02;
 bool in_air=0;
@@ -153,7 +153,7 @@ int randmod(int mod){
     return ((rand()-1)%mod+1);
 }
 
-class RandMap{
+class RandMap{//生成随机地图
 private:
     double xi[20];
     double yi[20];
@@ -178,17 +178,14 @@ private:
         for(int i=0;i<256;i++){
             P[i]=i;
         }
-        for(int i=0;i<256;++i){
+        for(int i=0;i<256;++i){//打乱
             int j=rand()%256;
             if(rand()&1){
                 swap(P[i],P[j]);
             }
         }
-        for(int i=0;i<256;i++){
+        for(int i=0;i<256;i++){//复制
             P[i+256]=P[i];
-        }
-        for(int i=0;i<256;i++){
-            cout<<P[i]<<" ";
         }
         return;
     }
@@ -397,20 +394,20 @@ bool cmp_bDis(block a,block b){
 //透视投影函数
 point_2D perspectiveProjection(const point_3D&point,const camera&cam){
     vec viewVector(point,cam.position);
-    double x=dot_product(viewVector,cam.right);
+    double x=dot_product(viewVector,cam.right);//相当于获取分量长度
     double y=dot_product(viewVector,cam.up);
     double z=dot_product(viewVector,cam.front);
-    if(z<=-0.0005)return point_2D(0,0);
+    if(z<=-0.0005)return point_2D(0,0);//后面的不渲染
     double scale=500.0/z;
     return point_2D(x*scale,y*scale);
 }
-point_2D perspectiveProjection_nondelete(const point_3D&point,const camera&cam){
+point_2D perspectiveProjection_nondelete(const point_3D&point,const camera&cam){//未删减点
     vec viewVector(point,cam.position);
 
     double x=dot_product(viewVector,cam.right);
     double y=dot_product(viewVector,cam.up);
     double z=dot_product(viewVector,cam.front);
-    double scale=500.0/z;
+    double scale=500.0/z;//焦距/系数
 
     return point_2D(x*scale,y*scale);
 }
@@ -425,7 +422,7 @@ bool Check(block b){
     /*  
         我们有:x=x_myself+k*x_towards
         判断法一:对于单个分量，求出对应k区间，对所有区间求交，若非空集则有交集
-                (查了一下，这个好像叫Slabs)
+                (查了一下，这个好像叫Slab)
     */
 
     vec to=myself.front*(-1);
@@ -436,7 +433,7 @@ bool Check(block b){
     //分别检查三个轴
     for(int i=0;i<3;i++){
         double invD,t1,t2;
-        double rayOrigin,rayDir,boxMin,boxMax;
+        double rayOrigin,rayDir,boxMin,boxMax;//位置，视角分量，限制区间
         
         switch(i){
             case 0:
@@ -459,7 +456,7 @@ bool Check(block b){
                 break;
         }
         
-        if(fabs(rayDir)<1e-6){
+        if(fabs(rayDir)<1e-6){//平行情况
             if(rayOrigin<boxMin||rayOrigin>boxMax){
                 return false;
             }
@@ -482,7 +479,7 @@ bool Check(block b){
     }
     return tMax>=0&&tMin<=tMax;
 }
-int Del(){
+int Del(){//消除方块
     int count=0;
     //首先根据distance排序
     sort(blocks.begin(),blocks.end(),cmp_bDis);
@@ -503,7 +500,7 @@ int Del(){
     }
     return count;
 }
-void add_block(int count){
+void add_block(int count){//放置方块
     vec to=myself.front*(-1);
     while(count--){
         point_3D p=myself.position+to*20;
@@ -516,12 +513,13 @@ void add_block(int count){
     return;
 }
 void set_(int &step,double &start,double &forward,double &maxm,double &delta,int &now){
-    if(forward!=0){
+    //DDA算法步进分量设置(方向步长默认绝对值为1，摄像机坐标分量，视线向量分量，到达下一个边界需要的参数值，增量，当前网格的坐标)
+    if(forward!=0){//不是平行
         double next=(step>0)?(now+1):now;
-        maxm=(next-start)/forward;
-        delta=(step/forward);
+        maxm=(next-start)/forward;//到达下一个边界需要的t值
+        delta=(step/forward);//变化量
     }
-    else{
+    else{//平行
         maxm=0x3f3f3f3f;
         delta=0;
     }
@@ -537,7 +535,7 @@ int setfwd(int f){
     else return -1;
 }
 
-void update_map(){//废弃函数，给正方体单独绘制边
+void update_map(){//预留接口，给正方体单独绘制边，暂时不启用该函数
     bian.clear();
     for(int i=1;i<=10;i++){
         for(int j=1;j<=10;++j){
@@ -548,16 +546,16 @@ void update_map(){//废弃函数，给正方体单独绘制边
     
     point_3D start=myself.position;
     vec fwd=myself.front*(-1);
-    
+    //DDA
     int sx,sy,sz;
-    double mx,my,mz;
+    double mx,my,mz;//下一个
     double dx,dy,dz;
-    
+
     int nx=floor(start.x);
     int ny=floor(start.y);
     int nz=floor(start.z);
     
-    sx=initsetfwd(fwd.x);
+    sx=initsetfwd(fwd.x);//先设置前后走
     sy=initsetfwd(fwd.y);
     sz=initsetfwd(fwd.z);
     
@@ -570,10 +568,10 @@ void update_map(){//废弃函数，给正方体单独绘制边
     int prey=ny;
     int prez=nz;
     
-    for(int i=0;i<20;i++){
-        if(Map[{nx,ny,nz}]!=0){
+    for(int i=0;i<20;i++){//最多走20步
+        if(Map[{nx,ny,nz}]!=0){//
 
-            block blocki(nx,ny,nz,1);
+            block blocki(nx,ny,nz,1);//放置方块，更新边
 
             bian.push_back(Edge(blocki+D[0]*blocki.bc,blocki+D[1]*blocki.bc));
             bian.push_back(Edge(blocki+D[1]*blocki.bc,blocki+D[2]*blocki.bc));
@@ -595,7 +593,7 @@ void update_map(){//废弃函数，给正方体单独绘制边
             break;
         }
         
-        if(mx<=my&&mx<=mz){
+        if(mx<=my&&mx<=mz){//
             nx+=sx;
             mx+=dx;
         }
@@ -612,7 +610,7 @@ void update_map(){//废弃函数，给正方体单独绘制边
     return;
 }
 
-bool haveB(int x,int y,int z){
+bool haveB(int x,int y,int z){//在x,y,z有方块
     auto it=Map.find({x,y,z});
     return it!=Map.end()&&it->second!=0;
 }
@@ -626,6 +624,8 @@ void updateAllVisibleFaces(){
         int z=block.z;
     
         //只添加与空气接触的面
+        //技术可能存在问题，在面对数量多的地图时会存在溢出的风险
+        //
         if(!haveB(x,y,z+1)){//前
             point_3D base(x,y,z);
             vector<CubeFace>faces;
@@ -634,7 +634,7 @@ void updateAllVisibleFaces(){
                 base+vec(1,1,1),base+vec(0,1,1),
                 vec(0,0,1)
             ));
-            visibleFacesCache[x*10000000+y*10000+z*6]=faces;//可能出问题
+            visibleFacesCache[x*10000000+y*10000+z*6]=faces;
         }
         if(!haveB(x,y,z-1)){//后
             point_3D base(x,y,z);
@@ -695,9 +695,10 @@ void update_phy();
 
 void drawScene(){
     //1.用双缓冲技术来解决闪烁问题
-    //2.动态刷新，无更新就不刷新，提高静止帧率("我的世界lunar端优化")
-    update_phy();
+    //2.动态刷新，无更新就不刷新，提高静止帧率
+    update_phy();//再次物理更新，减少卡入地面的BUG出现
     
+    //lock_guard<recursive_mutex>lock(cam_mtx);
     point_3D cam_pos;
     double cam_yaw,cam_pitch;
     vec cam_f,cam_r,cam_u;
@@ -719,7 +720,7 @@ void drawScene(){
     tmp_cam.up=cam_u;
     
     print_q.clear();
-    update_map();
+    //update_map();
 
     //只在需要时更新可见面
     if(needUpdateFaces){
@@ -727,33 +728,40 @@ void drawScene(){
     }
     
     //set blocks
-    point_3D light_position=tmp_cam.position;
+    point_3D light_position=tmp_cam.position;//点光源
     vector<CubeFace>visible_faces;
-    vector<double>Lt;
+    vector<double>Lt;//储存光强
     
     //从缓存收集可见面并计算深度
     for(auto cacheEntry:visibleFacesCache){
         for(auto face:cacheEntry.second){
             vec camera_to_face(tmp_cam.position,face.point_cube[0]);
             if(dot_product(face.normal,camera_to_face)<0){
+
                 point_3D face_center(
                     (face.point_cube[0].x+face.point_cube[1].x+face.point_cube[2].x+face.point_cube[3].x)/4.0,
                     (face.point_cube[0].y+face.point_cube[1].y+face.point_cube[2].y+face.point_cube[3].y)/4.0,
                     (face.point_cube[0].z+face.point_cube[1].z+face.point_cube[2].z+face.point_cube[3].z)/4.0
                 );
+
                 vec depth_vec(tmp_cam.position,face_center);
+
                 face.depth=depth_vec.length();
+
                 visible_faces.push_back(face);
+
                 //光强
                 vec light_dir(face_center,light_position);
                 light_dir.normalize();
-                double light_intensity=dot_product(face.normal,light_dir);
+
+                double light_intensity=dot_product(face.normal,light_dir);//根据面法向量与从自身到方块的向量的夹角计算光强
                 light_intensity=max(0.01,min(1.0,(light_intensity+1.0)/2.0));
                 Lt.push_back(light_intensity);
                 //cout<<light_intensity<<endl;
             }
         }
     }
+    //深度排序
     sort(visible_faces.begin(),visible_faces.end(),cmp_FaceDep);
     
     cleardevice();//清除
@@ -766,7 +774,7 @@ void drawScene(){
     
     int face_index=0;
     for(auto face:visible_faces){//绘制正方体
-        point_2D screen_points[4];
+        point_2D screen_points[4];//一个面的四个点
         bool all_visible=true;
         for(int i=0;i<4;i++){
             screen_points[i]=perspectiveProjection(face.point_cube[i],tmp_cam);
@@ -776,7 +784,7 @@ void drawScene(){
             }
         }
         
-        if(all_visible){//光照设置入口
+        if(all_visible){//光照设置
             POINT pts[4];
             for(int i=0;i<4;i++){
                 pts[i].x=(long)screen_points[i].x;
@@ -787,7 +795,7 @@ void drawScene(){
             int base_g=(int)((face.normal.y+1)*150);
             int base_b=(int)((face.normal.z+1)*200);
             
-            double depth_factor=max(0.3,1.0-face.depth/100.0);
+            double depth_factor=max(0.3,1.0-face.depth/100.0);//远处颜色浅
             
             int color=RGB(
                 (int)(base_r*depth_factor),
@@ -795,11 +803,6 @@ void drawScene(){
                 (int)(base_b*depth_factor)
             );
 
-            setlinecolor(RGB(
-                (int)(base_r*depth_factor*0.8),
-                (int)(base_g*depth_factor*0.8),
-                (int)(base_b*depth_factor*0.8)
-            ));
             setfillcolor(color);
 
             solidpolygon(pts,4);
@@ -809,7 +812,7 @@ void drawScene(){
 
     
     setlinecolor(0x000000);
-    // 保留线段绘制，之后在绘制选中的方块时可能会用到
+    //预留接口，线段绘制，绘制选中的方块时可能会用到
     for(const auto& edge:bian){//再绘制正方体
         const point_2D& p1=perspectiveProjection(edge.from,myself);
         const point_2D& p2=perspectiveProjection(edge.to,myself);
@@ -821,7 +824,7 @@ void drawScene(){
     setlinecolor(0x00FF00);
     line(5,0,-5,0);//准星
     line(0,5,0,-5);
-
+    //以下为打印屏幕信息，fps,destoried_block...
     string output_string1="FPS:"+to_string(fps_out);//+"\naccuracy:"+to_string(double(click_valuble)/double(click))
     char output[100];
     for(int i=0;i<output_string1.size();i++){
@@ -940,7 +943,7 @@ void play2(){
 
 bool is_jumping=false;
 
-int land(){
+int land(){//查找脚下的路方块的y坐标
     lock_guard<recursive_mutex>lock(cam_mtx);
     int x=floor(myself.position.x);
     int y=floor(myself.position.y);
@@ -968,7 +971,7 @@ void jump(){
     return;
 }
 
-void update_phy(){
+void update_phy(){//第二次重力更新
     static clock_t lst=clock();
     clock_t now=clock();
     double dt=double(now-lst)/CLOCKS_PER_SEC;
@@ -977,10 +980,10 @@ void update_phy(){
     //cout<<"Y:"<<myself.position.y<<" InAir:"<<in_air<<" OnGround:"<<onGround<<" vy:"<<vy<<endl;
     
     if(!onGround){
-        vy-=G*dt*30;
+        vy-=G*dt*30;//初始v设置
         myself.position.y+=vy*dt*30;
         int gnd=land();
-        if(myself.position.y<=gnd+2){
+        if(myself.position.y<=gnd+2){//参数设置
             myself.position.y=gnd+2;
             onGround=1;
             in_air=0;
@@ -999,15 +1002,10 @@ void update_phy(){
         }
     }
     lst=now;
-}
-
-void keepdrawScene(){
-    while(1){
-        drawScene();
-    }
     return;
 }
-void down(){
+
+void down(){//下降，与update_phy相似
     int y=land()+2;
     //cout<<y<<endl;
     //cout<<y;
@@ -1033,7 +1031,7 @@ void down(){
     }
     is_down=false;
 }
-bool can_move(point_3D p){
+bool can_move(point_3D p){//碰撞检测
     lock_guard<recursive_mutex>lock(cam_mtx);
     int x=floor(p.x);
     int y=floor(p.y);
@@ -1057,17 +1055,19 @@ void place_block(){
     //这样时间复杂度不再是O(方块总数)，而是O(视线长度/步长)
     //但是考虑到还会有不精确的问题（我不想再左右横跳了）所以这里用DDA优化
 
+
+    //DDA算法主要内容
     point_3D start=myself.position;
     vec fwd=myself.front*(-1);
     
-    int sx,sy,sz;
-    double mx,my,mz;
-    double dx,dy,dz;
-    
+    int sx,sy,sz;//起始位置
+    double mx,my,mz;//记录到达下一个网格边界需要的"距离"
+    double dx,dy,dz;//参数t的步进增量，总是选择最小的来步进
+    //当前出发点
     int nx=floor(start.x);
     int ny=floor(start.y);
     int nz=floor(start.z);
-    
+    //初始化方向，向前还是后
     sx=initsetfwd(fwd.x);
     sy=initsetfwd(fwd.y);
     sz=initsetfwd(fwd.z);
@@ -1082,12 +1082,15 @@ void place_block(){
     int prez=nz;
     
     for(int i=0;i<20;i++){
+        //若当前有方块
         if(Map[{nx,ny,nz}]!=0){
+            //原先的坐标不等于现在的坐标并且原先的坐标没有方块
+            //撞到方块
             if((prex!=nx||prey!=ny||prez!=nz)&&Map[{prex,prey,prez}]==0){
                 int camx=floor(myself.position.x);
                 int camy=floor(myself.position.y);
                 int camz=floor(myself.position.z);
-                
+                //碰撞检测，对摄像机所在位置以及下面的位置检测
                 if(!((prex==camx&&prey==camy&&prez==camz)||(prex==camx&&prey==(camy-1)&&prez==camz))){
                     Map[{prex,prey,prez}]=1;
                     blocks.push_back(block(prex,prey,prez,1));
@@ -1097,6 +1100,8 @@ void place_block(){
             }
             
             int px=nx,py=ny,pz=nz;
+            //这里判断下一个位置，视线穿墙放置(还原了基岩版的一个特性)
+            
             if(mx<=my&&mx<=mz){
                 px+=setfwd(sx);
             }
@@ -1106,7 +1111,7 @@ void place_block(){
             else{
                 pz+=setfwd(sz);
             }
-            
+            //二次检测
             if(Map[{px,py,pz}]==0){
                 int camx=floor(myself.position.x);
                 int camy=floor(myself.position.y);
@@ -1125,10 +1130,13 @@ void place_block(){
         prey=ny;
         prez=nz;
         
+        //寻找t增量最小的来走，保证不会遗漏
+
         if(mx<=my&&mx<=mz){
-            nx+=sx;
-            mx+=dx;
-        }
+            //x方向的下一个边界最近，沿x轴步进
+            nx+=sx;//x坐标改变一个网格
+            mx+=dx;//更新到达下一个边界需要的x边界的t值
+        }//一下同理
         else if(my<=mx&&my<=mz){
             ny+=sy;
             my+=dy;
